@@ -1,0 +1,28 @@
+{
+    "name": "@bestapps/microservice-cli",
+    "homepage": "https://github.com/bestapps-ua/microservice.cli",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/bestapps-ua/microservice.cli.git"
+    },
+    "bugs": {
+        "url": "https://github.com/bestapps-ua/microservice.cli/issues"
+    },
+    "main": "index.js",
+    "version": "1.0.0",
+    "bin": {
+        "bestapps-microservice-cli": "bin/cli.js"
+    }
+    "dependencies": {
+        "inquirer": "9.2.7"
+    },
+    "keywords": [
+        "sql",
+        "orm",
+        "entity",
+        "redis",
+        "installer",
+        "moleculer",
+        "microservice"
+    ]
+}
