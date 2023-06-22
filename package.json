@@ -12,9 +12,13 @@
     "version": "1.0.0",
     "bin": {
         "bestapps-microservice-cli": "bin/cli.js"
-    }
+    },
     "dependencies": {
         "inquirer": "9.2.7"
+    },
+    "type": "module",
+    "scripts": {
+        "command": "node ./bin/cli.js"
     },
     "keywords": [
         "sql",
