@@ -14,6 +14,7 @@
         "bestapps-microservice-cli": "bin/cli.js"
     },
     "dependencies": {
+        "fs-move": "4.0.2",
         "inquirer": "9.2.7"
     },
     "type": "module",

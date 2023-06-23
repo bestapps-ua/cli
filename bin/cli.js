@@ -1,33 +1,44 @@
 #!/usr/bin/env node
 
-import inquirer from 'inquirer';
 import {COMMAND_INIT} from "../src/commands.js";
 import routing from "../src/routing.js";
 import RegistryModel from "../src/model/RegistryModel.js";
 import states from "../src/states.js";
+import AskModel from "../src/model/AskModel.js";
 
 let state = RegistryModel.get('state') || states.STATE_LAUNCH ;
-let cb = RegistryModel.get('cb');
 
-inquirer
-    .prompt([
-        {
-            type: 'list',
-            name: 'command',
-            message: 'What do you want to do?',
-            choices: [
-                COMMAND_INIT,
-            ],
+
+const prompt = [
+    {
+        type: 'list',
+        name: 'command',
+        message: 'What do you want to do?',
+        choices: [
+            COMMAND_INIT,
+        ],
+    }
+];
+
+const callback = async (answers) => {
+    let cb = RegistryModel.get('cb');
+
+    if(state === states.STATE_LAUNCH) {
+        cb = answers.command;
+    }
+    console.log('answers', answers);
+    await routing[cb].cb(state, answers, (newState, prompt) => {
+
+        state = newState;
+        if(state === states.STATE_FINISHED) {
+            return ;
         }
-    ])
-    .then(async (answers) => {
-        if(state === states.STATE_LAUNCH) {
-            cb = answers.command;
-        }
-        state = await routing[cb].cb(state);
         RegistryModel.set('state', state);
-        RegistryModel.set('cb', cb);
-    })
-    .catch((error) => {
-        console.log('INTERNAL ERROR', error);
+        AskModel.ask(prompt, callback);
     });
+
+    RegistryModel.set('state', state);
+    RegistryModel.set('cb', cb);
+}
+
+AskModel.ask(prompt, callback);
