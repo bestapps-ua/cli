@@ -9,7 +9,7 @@
         "url": "https://github.com/bestapps-ua/microservice.cli/issues"
     },
     "main": "index.js",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "bin": {
         "bestapps-microservice-cli": "bin/cli.js"
     },

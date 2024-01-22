@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {COMMAND_INIT} from "../src/commands.js";
+import {COMMAND_INIT_MICROSERVICE} from "../src/commands.js";
 import routing from "../src/routing.js";
 import RegistryModel from "../src/model/RegistryModel.js";
 import states from "../src/states.js";
@@ -15,7 +15,7 @@ const prompt = [
         name: 'command',
         message: 'What do you want to do?',
         choices: [
-            COMMAND_INIT,
+            COMMAND_INIT_MICROSERVICE,
         ],
     }
 ];

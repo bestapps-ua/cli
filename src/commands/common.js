@@ -1,7 +1,3 @@
-'use strict';
-
-import RegistryModel from "../model/RegistryModel.js";
-
 import fs from 'fs';
 
 import states from "../states.js";
@@ -15,7 +11,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtemp } from 'node:fs';
 
-function askPath() {
+export function askPath() {
     return [
         {
             type: 'input',
@@ -26,9 +22,9 @@ function askPath() {
     ];
 }
 
-async function processPath(path, canCreate) {
+export async function processPath(repo, path, canCreate) {
     if (fs.existsSync(path)) {
-        return await initGitRepo(path);
+        return await initGitRepo(repo, path);
     } else {
         if (!canCreate) {
             return {
@@ -44,14 +40,14 @@ async function processPath(path, canCreate) {
         }
         try {
             fs.mkdirSync(path, {recursive: true, mode: '0755'});
-            return await initGitRepo(path);
+            return await initGitRepo(repo, path);
         } catch (err) {
             return createFailed(path, err.message);
         }
     }
 }
 
-function createFailed(path, message) {
+export function createFailed(path, message) {
     return {
         state: states.STATE_INIT_CREATE_FAILED,
         prompt: [
@@ -64,8 +60,7 @@ function createFailed(path, message) {
         ]
     };
 }
-
-async function initGitRepo(path) {
+export async function initGitRepo(repo, path) {
     let files = fs.readdirSync(path);
     let removeGit = true;
     for (const file of files) {
@@ -92,7 +87,7 @@ async function initGitRepo(path) {
                 return resolve(createFailed(path, err.message));
             }
 
-            exec(`git clone git@github.com:bestapps-ua/microservice.starter.kit.git ${directory}; ${removeGitCommand}`, async (err, stdout, stderr) => {
+            exec(`git clone ${repo} ${directory}; ${removeGitCommand}`, async (err, stdout, stderr) => {
                 if (err) {
                     // node couldn't execute the command
                     return resolve(createFailed(path, err.message));
@@ -111,7 +106,7 @@ async function initGitRepo(path) {
     });
 }
 
-async function move(from, to) {
+export async function move(from, to) {
     try {
         await new Promise((res, rej) => {
             mv(`${from}`, `${to}`, {overwrite: true}, err => {
@@ -123,31 +118,5 @@ async function move(from, to) {
         });
     } catch (err) {
         return createFailed(to, err.message);
-    }
-}
-
-export async function commandInit(state, answers, cb) {
-    let res;
-    let path;
-    let canCreate = RegistryModel.get('canCreate');
-    switch (state) {
-        case states.STATE_INIT_CREATE:
-            canCreate = answers.command;
-            if (!canCreate) {
-                console.log('Okay, exiting program');
-                return cb(states.STATE_FINISHED);
-            }
-            path = RegistryModel.get('path');
-            res = await processPath(path, canCreate);
-            RegistryModel.set('canCreate', canCreate);
-            return cb(res.state, res.prompt);
-        case states.STATE_INIT_CREATE_FAILED:
-        case states.STATE_INIT:
-            path = answers.command;
-            RegistryModel.set('path', path);
-            res = await processPath(path, canCreate);
-            return cb(res.state, res.prompt);
-        default:
-            return cb(states.STATE_INIT, askPath());
     }
 }

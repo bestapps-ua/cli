@@ -1,11 +1,11 @@
 'use strict';
 
-import {COMMAND_INIT} from "./commands.js";
-import {commandInit} from "./commands/commandInit.js";
+import {COMMAND_INIT_MICROSERVICE} from "./commands.js";
+import {commandInitMicroservice} from "./commands/commandInitMicroservice.js";
 
 let routing = {
-    [COMMAND_INIT]: {
-        cb: commandInit
+    [COMMAND_INIT_MICROSERVICE]: {
+        cb: commandInitMicroservice
     }
 };
 

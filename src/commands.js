@@ -1,7 +1,7 @@
 'use strict';
 
-const COMMAND_INIT = 'Init microservice';
+const COMMAND_INIT_MICROSERVICE = 'Init microservice';
 
 export {
-    COMMAND_INIT,
+    COMMAND_INIT_MICROSERVICE,
 };
