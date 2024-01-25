@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {COMMAND_INIT_MICROSERVICE} from "../src/commands.js";
+import {COMMAND_INIT_APIGW, COMMAND_INIT_MICROSERVICE, COMMAND_INIT_USER_MICROSERVICE} from "../src/commands.js";
 import routing from "../src/routing.js";
 import RegistryModel from "../src/model/RegistryModel.js";
 import states from "../src/states.js";
@@ -16,6 +16,8 @@ const prompt = [
         message: 'What do you want to do?',
         choices: [
             COMMAND_INIT_MICROSERVICE,
+            COMMAND_INIT_APIGW,
+            COMMAND_INIT_USER_MICROSERVICE,
         ],
     }
 ];
@@ -28,7 +30,6 @@ const callback = async (answers) => {
     }
     console.log('answers', answers);
     await routing[cb].cb(state, answers, (newState, prompt) => {
-
         state = newState;
         if(state === states.STATE_FINISHED) {
             return ;

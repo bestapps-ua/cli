@@ -15,7 +15,8 @@
     },
     "dependencies": {
         "fs-move": "4.0.2",
-        "inquirer": "9.2.7"
+        "inquirer": "9.2.7",
+        "inquirer-list-input": "0.1.2"
     },
     "type": "module",
     "scripts": {

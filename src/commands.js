@@ -1,7 +1,11 @@
 'use strict';
 
 const COMMAND_INIT_MICROSERVICE = 'Init microservice';
+const COMMAND_INIT_APIGW = 'Init APIGW';
+const COMMAND_INIT_USER_MICROSERVICE = 'Init User Microservice';
 
 export {
     COMMAND_INIT_MICROSERVICE,
+    COMMAND_INIT_APIGW,
+    COMMAND_INIT_USER_MICROSERVICE,
 };
