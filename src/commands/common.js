@@ -11,17 +11,12 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {mkdtemp} from 'node:fs';
 import RegistryModel from "../model/RegistryModel.js";
+import routing from "../routing.js";
+import AskModel from "../model/AskModel.js";
+import configModel from "../model/ConfigModel.js";
+import {askConfigFillInput, askCreateFailed} from "./asks.js";
+import historyModel from "../model/HistoryModel.js";
 
-export function askPath() {
-    return [
-        {
-            type: 'input',
-            name: 'command',
-            message: 'Please provide path',
-            default: process.cwd(),
-        }
-    ];
-}
 
 export async function processPath(repo, path, canCreate) {
     if (fs.existsSync(path)) {
@@ -43,23 +38,9 @@ export async function processPath(repo, path, canCreate) {
             fs.mkdirSync(path, {recursive: true, mode: '0755'});
             return await initGitRepo(repo, path);
         } catch (err) {
-            return createFailed(path, err.message);
+            return askCreateFailed(path, err.message);
         }
     }
-}
-
-export function createFailed(path, message) {
-    return {
-        state: states.STATE_INIT_CREATE_FAILED,
-        prompt: [
-            {
-                type: 'input',
-                name: 'command',
-                message: `Failed to create ${path}.\nError: ${message}.\nPlease provide new path or fix issue`,
-                default: path,
-            }
-        ]
-    };
 }
 
 export async function initGitRepo(repo, path) {
@@ -76,7 +57,7 @@ export async function initGitRepo(repo, path) {
             });
         });
         if (isDirectory) {
-            return createFailed(path, `Directory already have other directories ${file}`);
+            return askCreateFailed(path, `Directory already have other directories ${file}`);
         }
     }
 
@@ -84,13 +65,13 @@ export async function initGitRepo(repo, path) {
         mkdtemp(join(tmpdir(), 'bestapps-microservice'), (err, directory) => {
             let removeGitCommand = `rm -rf ${directory}/.git;`;
             if (err) {
-                return resolve(createFailed(path, err.message));
+                return resolve(askCreateFailed(path, err.message));
             }
 
             exec(`git clone ${repo} ${directory}; ${removeGitCommand}`, async (err, stdout, stderr) => {
                 if (err) {
                     // node couldn't execute the command
-                    return resolve(createFailed(path, err.message));
+                    return resolve(askCreateFailed(path, err.message));
                 }
                 let res = await moveFiles(`${directory}`, `${path}`);
                 if (res) {
@@ -125,69 +106,64 @@ async function moveFiles(from, to) {
             });
         });
     } catch (err) {
-        return createFailed(to, err.message);
+        return askCreateFailed(to, err.message);
     }
 }
 
-function makeLinearConfig(config, list, currentKey = undefined, level = 0) {
-    let keys = Object.keys(config);
-    if (keys.length === 0) {
-        return;
-    }
-    if (!currentKey) {
-        return makeLinearConfig(config, list, keys[0], level);
-    }
-    for (let i = 0; i < keys.length; i++) {
-        let key = keys[i];
-        let currentKeys = currentKey.split('::');
-        let keyByLevel = currentKeys[level];
-        if (key === keyByLevel) {
-            let conf = config[key];
-            if (Array.isArray(conf) || typeof conf !== 'object') {
-                list.push({
-                    currentKey,
-                    value: conf
-                });
-            } else {
-                for (let k of Object.keys(conf)) {
-                    makeLinearConfig(conf, list, `${currentKey}::${k}`, level + 1);
-                }
-            }
-            if (keys[i + 1]) {
-                return makeLinearConfig(config, list, keys[i + 1], level);
-            }
-        }
-    }
-}
-
-function getConfigByLevel(config, key) {
-    let currentKeys = key.split("::");
-    let nextKey = currentKeys[0];
-    if (currentKeys.length > 1) {
-        currentKeys.shift();
-        let nextKeys = currentKeys.join("::");
-        return getConfigByLevel(config[nextKey], nextKeys);
-    }
-    return config[nextKey];
-}
 
 export async function configFill(config, name) {
     let configKey = RegistryModel.get('configKey');
     let list = [];
-    makeLinearConfig(config, list);
+    configModel.makeLinearConfig(config, list);
     if (list.length === 0) {
         //TODO: return other state STATE_CONFIG_READ_ERROR
     }
     if (!configKey) {
         configKey = list[0].currentKey;
     }
-    let configValue = getConfigByLevel(config, configKey);
+    let configValue = configModel.getConfigByLevel(config, configKey);
     RegistryModel.set('configKey', configKey);
     return askFillConfigKey(config, name, configKey, configValue);
 }
 
 function askFillConfigKey(config, name, configKey, configValue) {
-    //TODO: get from registry other possible keys to select on secondary position
+    function onlyUnique(value, index, array) {
+        return array.indexOf(value) === index;
+    }
+
+    configValue = `${configValue}`.trim();
+    let historyConfig = historyModel.getHistoryConfig();
+    let historyKey = historyModel.normalizeHistoryKey(configKey);
+
+    if (configValue.length === 0 && !historyConfig[historyKey]) {
+        return askConfigFillInput(name, configKey);
+    }
+    let list = [];
+
+    if (["true", "false"].includes(configValue)) {
+        list = [
+            configValue,
+            configValue === "true" ? "false" : "true"
+        ];
+    } else {
+        list = [
+            configValue,
+        ];
+
+        let isService = historyModel.isValueWithYourService(configValue);
+        if (isService || isService === '') {
+            let sk = historyConfig['YOURSERVICENAME'] && historyConfig['YOURSERVICENAME'][0];
+            if (sk) {
+                let your = configValue.replace('YOURSERVICENAME', sk);
+                list.push(your);
+            }
+        }
+        if (historyConfig[historyKey]) {
+            list = list.concat(historyConfig[historyKey]);
+        }
+        list = list.filter(onlyUnique);
+        list.push('Write other...');
+    }
     return {
         state: states.STATE_CONFIG_FILL_RESPONSE,
         prompt: [
@@ -196,51 +172,36 @@ function askFillConfigKey(config, name, configKey, configValue) {
                 name: 'command',
                 message: `${name} config choose ${configKey}`,
                 editableList: true,
-                choices: [
-                    configValue,
-                    'Write other...'
-                ],
+                choices: list,
                 default: configValue,
             }
         ]
     }
 }
 
-export async function configFillInput(name) {
+export async function configFillInput(config, name) {
     let configKey = RegistryModel.get('configKey');
-    return {
-        state: states.STATE_CONFIG_FILL_INPUT_RESPONSE,
-        prompt: [
-            {
-                type: 'input',
-                name: 'command',
-                message: `${name} config ${configKey} value:`,
-            }
-        ]
+    let configValue = configModel.getConfigByLevel(config, configKey);
+    let isService = historyModel.isValueWithYourService(configValue);
+    let historyConfig = historyModel.getHistoryConfig();
+    if (isService || isService === '') {
+        let sk = historyConfig['YOURSERVICENAME'] && historyConfig['YOURSERVICENAME'][0];
+        if(sk) {
+            let your = configValue.replace('YOURSERVICENAME', sk);
+            return askConfigFillInput(name, configKey, your);
+        }
     }
-}
-
-function storeConfig(config, key, value) {
-    let currentKeys = key.split("::");
-    let nextKey = currentKeys[0];
-    if (!config[nextKey]) {
-        config[nextKey] = {};
-    }
-    if (currentKeys.length > 1) {
-        currentKeys.shift();
-        let nextKeys = currentKeys.join("::");
-        return storeConfig(config[nextKey], nextKeys, value);
-    }
-    config[nextKey] = value;
-    return config;
+    return askConfigFillInput(name, configKey);
 }
 
 export async function configFillStore(config, name, value) {
     let configKey = RegistryModel.get('configKey');
     let configData = RegistryModel.get('configData') || {};
-    storeConfig(configData, configKey, value);
+    configModel.storeConfig(configData, configKey, value);
+    let defaultValue = configModel.getConfigByLevel(config, configKey);
+    historyModel.storeSelectedKeyValueHistory(configKey, value, defaultValue);
     let list = [];
-    makeLinearConfig(config, list);
+    configModel.makeLinearConfig(config, list);
     let nextKey;
     for (let i = 0; i < list.length; i++) {
         if (list[i].currentKey === configKey) {
@@ -252,13 +213,12 @@ export async function configFillStore(config, name, value) {
     }
 
     if (nextKey) {
-        let configValue = getConfigByLevel(config, nextKey);
+        let configValue = configModel.getConfigByLevel(config, nextKey);
         RegistryModel.set('configKey', nextKey);
+        RegistryModel.set('configData', configData);
         return askFillConfigKey(config, name, nextKey, configValue);
     }
-    let path = RegistryModel.get('path');
-    let filename = `${path}/config/local.json`;
-    fs.writeFileSync(filename, JSON.stringify(configData), {encoding: 'utf8'});
+    const filename = configModel.createConfig(configData);
     return {
         state: states.STATE_NEXT,
         prompt: [
@@ -275,4 +235,33 @@ export async function configFillStore(config, name, value) {
             }
         ]
     }
+}
+
+
+export async function getCommands(answers) {
+    let state = RegistryModel.get('state') || states.STATE_LAUNCH ;
+    let cb = RegistryModel.get('cb');
+
+    if(state === states.STATE_LAUNCH) {
+        cb = answers.command;
+    }
+    console.log('answers', answers);
+    await routing[cb].cb(state, answers, (newState, prompt) => {
+        state = newState;
+        if(state === states.STATE_FINISHED) {
+            return ;
+        }
+        RegistryModel.set('state', state);
+        AskModel.ask(prompt, getCommands);
+    });
+
+    RegistryModel.set('state', state);
+    RegistryModel.set('cb', cb);
+}
+
+export function clear() {
+    RegistryModel.set('configKey', undefined);
+    RegistryModel.set('configData', {});
+    historyModel.clear();
+    configModel.clear();
 }

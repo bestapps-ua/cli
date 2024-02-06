@@ -1,14 +1,17 @@
 import RegistryModel from "../../model/RegistryModel.js";
 import states from "../../states.js";
-import {askPath, configFill, configFillInput, configFillStore, processPath} from "../common.js";
-import fs from 'fs';
+import {
+    clear,
+    configFill,
+    configFillInput,
+    configFillStore,
+    getCommands,
+    processPath
+} from "../common.js";
 
-function getConfig() {
-    let path = RegistryModel.get('path');
-    let filename = `${path}/config/example.json`;
-    RegistryModel.set('config::filename', filename);
-    return JSON.parse(fs.readFileSync(filename, 'utf8'));
-}
+import configModel from "../../model/ConfigModel.js";
+import {askCommands, askPath} from "../asks.js";
+
 
 export async function copyRepoFlow(state, answers, repo, name, cb) {
     let res;
@@ -35,16 +38,17 @@ export async function copyRepoFlow(state, answers, repo, name, cb) {
             res = await processPath(repo, path, canCreate);
             return cb(res.state, res.prompt);
         case states.STATE_CONFIG_FILL:
-            configData = getConfig();
+            configData = configModel.getConfig();
             res = await configFill(configData, name);
             return cb(res.state, res.prompt);
         case states.STATE_CONFIG_FILL_RESPONSE:
             if(answer === 'Write other...') {
-                res = await configFillInput(name);
+                configData = configModel.getConfig();
+                res = await configFillInput(configData, name);
                 return cb(res.state, res.prompt);
             }
         case states.STATE_CONFIG_FILL_INPUT_RESPONSE:
-            configData = getConfig();
+            configData = configModel.getConfig();
             res = await configFillStore(configData, name, answer);
             return cb(res.state, res.prompt);
             break;
@@ -52,6 +56,8 @@ export async function copyRepoFlow(state, answers, repo, name, cb) {
         case states.STATE_NEXT:
             if(answer === 'Next >>>') {
                 //TODO: show all again!
+                clear();
+                return cb(states.STATE_LAUNCH, askCommands());
             }
             path = RegistryModel.get('path');
             console.log(`Okay, init finished in ${path}. Enjoy!`);
