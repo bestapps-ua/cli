@@ -54,3 +54,35 @@ export function askConfigFillInput(name, configKey, defaultValue = '') {
         ]
     }
 }
+
+export function askConfigFillList(configName, defaultValue, key, list) {
+    return {
+        state: states.STATE_CONFIG_FILL_RESPONSE,
+        prompt: [
+            {
+                type: 'list',
+                name: 'command',
+                message: `${configName} config choose ${key}`,
+                editableList: true,
+                choices: list,
+                default: defaultValue,
+            }
+        ]
+    }
+}
+
+export function askConfigFillChoicesList(configName, defaultValue, key, list) {
+    return {
+        state: states.STATE_CONFIG_FILL_CHOICES_RESPONSE,
+        prompt: [
+            {
+                type: 'checkbox',
+                name: 'command',
+                message: `${configName} config choose ${key}`,
+                editableList: true,
+                choices: list,
+                default: defaultValue,
+            }
+        ]
+    }
+}

@@ -64,7 +64,11 @@ class HistoryModel {
     }
 
     clear() {
-        RegistryModel.set('selectedKeys', {});
+        let config = this.getHistoryConfig();
+        if (config['YOURSERVICENAME']) {
+            delete config['YOURSERVICENAME'];
+            RegistryModel.set('selectedKeys', config);
+        }
     }
 }
 

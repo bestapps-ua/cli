@@ -14,7 +14,7 @@ import RegistryModel from "../model/RegistryModel.js";
 import routing from "../routing.js";
 import AskModel from "../model/AskModel.js";
 import configModel from "../model/ConfigModel.js";
-import {askConfigFillInput, askCreateFailed} from "./asks.js";
+import {askConfigFillChoicesList, askConfigFillInput, askConfigFillList, askCreateFailed} from "./asks.js";
 import historyModel from "../model/HistoryModel.js";
 
 
@@ -131,7 +131,7 @@ function askFillConfigKey(config, name, configKey, configValue) {
         return array.indexOf(value) === index;
     }
 
-    configValue = `${configValue}`.trim();
+    configValue = Array.isArray(configValue) ? configValue : `${configValue}`.trim();
     let historyConfig = historyModel.getHistoryConfig();
     let historyKey = historyModel.normalizeHistoryKey(configKey);
 
@@ -145,11 +145,13 @@ function askFillConfigKey(config, name, configKey, configValue) {
             configValue,
             configValue === "true" ? "false" : "true"
         ];
+    } else if(Array.isArray(configValue)) {
+        list = JSON.parse(JSON.stringify(configValue));
+        return askConfigFillChoicesList(name, configValue, configKey, list);
     } else {
         list = [
             configValue,
         ];
-
         let isService = historyModel.isValueWithYourService(configValue);
         if (isService || isService === '') {
             let sk = historyConfig['YOURSERVICENAME'] && historyConfig['YOURSERVICENAME'][0];
@@ -164,19 +166,7 @@ function askFillConfigKey(config, name, configKey, configValue) {
         list = list.filter(onlyUnique);
         list.push('Write other...');
     }
-    return {
-        state: states.STATE_CONFIG_FILL_RESPONSE,
-        prompt: [
-            {
-                type: 'list',
-                name: 'command',
-                message: `${name} config choose ${configKey}`,
-                editableList: true,
-                choices: list,
-                default: configValue,
-            }
-        ]
-    }
+    return askConfigFillList(name, configValue, configKey, list);
 }
 
 export async function configFillInput(config, name) {

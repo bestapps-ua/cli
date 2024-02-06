@@ -41,17 +41,19 @@ export async function copyRepoFlow(state, answers, repo, name, cb) {
             configData = configModel.getConfig();
             res = await configFill(configData, name);
             return cb(res.state, res.prompt);
+
         case states.STATE_CONFIG_FILL_RESPONSE:
             if(answer === 'Write other...') {
                 configData = configModel.getConfig();
                 res = await configFillInput(configData, name);
                 return cb(res.state, res.prompt);
             }
+        case states.STATE_CONFIG_FILL_CHOICES_RESPONSE:
         case states.STATE_CONFIG_FILL_INPUT_RESPONSE:
             configData = configModel.getConfig();
             res = await configFillStore(configData, name, answer);
             return cb(res.state, res.prompt);
-            break;
+
 
         case states.STATE_NEXT:
             if(answer === 'Next >>>') {
