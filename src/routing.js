@@ -1,20 +1,11 @@
 'use strict';
 
-import {COMMAND_INIT_APIGW, COMMAND_INIT_MICROSERVICE, COMMAND_INIT_USER_MICROSERVICE} from "./commands.js";
-import {commandInitMicroservice} from "./commands/commandInitMicroservice.js";
-import {commandInitAPIGW} from "./commands/commandInitAPIGW.js";
-import {commandInitUserMicroservice} from "./commands/commandInitUserMicroservice.js";
+import {generateCommands} from "./commands.js";
 
-let routing = {
-    [COMMAND_INIT_MICROSERVICE]: {
-        cb: commandInitMicroservice
-    },
-    [COMMAND_INIT_APIGW]: {
-        cb: commandInitAPIGW
-    },
-    [COMMAND_INIT_USER_MICROSERVICE]: {
-        cb: commandInitUserMicroservice
-    }
-};
+let commands = generateCommands();
+let routing = {};
+for (const command of commands) {
+    routing[`Init ${command.name}`] = {cb: command.callback};
+}
 
 export default routing;

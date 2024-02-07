@@ -56,6 +56,7 @@ class HistoryModel {
     }
 
     isValueWithYourService(defaultValue) {
+        if(typeof defaultValue !== 'string') return false;
         let m = defaultValue.match(/(.*)YOURSERVICENAME$/i);
         if (m && (m[1] || m[1] === '')) {
             return m[1];

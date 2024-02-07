@@ -1,17 +1,18 @@
-import {COMMAND_INIT_APIGW, COMMAND_INIT_MICROSERVICE, COMMAND_INIT_USER_MICROSERVICE} from "../commands.js";
 import states from "../states.js";
+import {generateCommands} from "../commands.js";
 
 export function askCommands() {
+    let commands = generateCommands();
+    let list = [];
+    for (const command of commands) {
+        list.push(`Init ${command.name}`);
+    }
     return [
         {
             type: 'list',
             name: 'command',
             message: 'What do you want to do?',
-            choices: [
-                COMMAND_INIT_MICROSERVICE,
-                COMMAND_INIT_APIGW,
-                COMMAND_INIT_USER_MICROSERVICE,
-            ],
+            choices: list,
         }
     ];
 }
